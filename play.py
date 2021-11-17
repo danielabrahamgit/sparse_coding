@@ -5,20 +5,34 @@ from utils import *
 from keras.datasets import mnist
 from sklearn.feature_extraction import image
 
+# Parameters
+# --------------------------------------
+patch_shape = (5,5)
+stride_len = (1,1)
+# --------------------------------------
+
+# Gen training/test data
 (train_X, train_y), (test_X, test_y) = mnist.load_data()
-img = train_X[0]
 
+# Use patches instead of full images
+train_patches = []
+test_patches = []
+for img in train_X:
+	p, tls = extract_grayscale_patches(
+					img=img, 
+					shape=patch_shape,
+					stride=stride_len)
+	train_patches.append(p)
 
-patch_shape = (14,14)
-stride_len = (5,5)
-p, tls = extract_grayscale_patches(
-				img= img, 
-				shape=patch_shape,
-				stride=stride_len)
-t, l = tls
-fig, ax = plt.subplots()
-for i in range(len(t)):
-	ax.add_patch(patches.Rectangle((t[i], l[i]), patch_shape[0], patch_shape[1], linewidth=1, edgecolor='r', facecolor='none'))
+for img in test_X:
+	p, tls = extract_grayscale_patches(
+					img=img, 
+					shape=patch_shape,
+					stride=stride_len)
+	test_patches.append(p)
+	
+train_patches = np.array(train_patches)
+test_patches = np.array(test_patches)
+
 recon, _ = reconstruct_from_grayscale_patches(p, tls)
-ax.imshow(recon)
-plt.show()
+
