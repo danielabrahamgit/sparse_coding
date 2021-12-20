@@ -90,3 +90,48 @@ def reconstruct_from_grayscale_patches( patches, origin, epsilon=1e-12 ):
 
     return out/np.maximum( wgt, epsilon ), wgt
 	
+
+def blockshaped(arr, nrows, ncols):
+    """
+    Return an array of shape (n, nrows, ncols) where
+    n * nrows * ncols = arr.size
+
+    If arr is a 2D array, the returned array should look like n subblocks with
+    each subblock preserving the "physical" layout of arr.
+    """
+    h, w = arr.shape
+    assert h % nrows == 0, f"{h} rows is not evenly divisible by {nrows}"
+    assert w % ncols == 0, f"{w} cols is not evenly divisible by {ncols}"
+    return (arr.reshape(h//nrows, nrows, -1, ncols)
+               .swapaxes(1,2)
+               .reshape(-1, nrows, ncols))
+
+
+# Algorithm 5.1 in https://www.learningtheory.org/colt2009/papers/009.pdf
+def lsc(Y, D, sigma):
+
+    def omega_bar(t):
+        return t ** 2 * (t <= 1) + (2 * np.abs(t) - 1) * (t > 1)
+
+    beta = 4 * sigma * sigma
+    tau = 4 * sigma / np.linalg.norm(D, ord='fro')
+    T = D.shape[0]
+    # h = beta / (np.linalg.norm(D, ord='fro') ** 2)
+    h = beta / (D.shape[0] * D.shape[1])
+
+    L = np.zeros(D.shape[1])
+    lambd = np.zeros_like(L)
+    H = 0
+
+    DD = D.T @ D
+    Dy = D.T @ Y
+    i = 0
+    while H < T:
+        i += 1
+        nablaV = (2 / beta) * (Dy - DD @ L)
+        nablaV = nablaV - 4 * L / (tau ** 2 + L ** 2)
+        L = L + h * nablaV + np.sqrt(2 * h) * np.random.normal(0, 1, L.shape)
+        H = H + h
+        lambd = lambd + h * L / T
+
+    return lambd
